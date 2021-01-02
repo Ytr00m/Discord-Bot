@@ -128,5 +128,5 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# Local config files
-*.json
+# Local config file
+config.json
