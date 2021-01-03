@@ -180,16 +180,16 @@ async def ajuda(ctx):
     embed=discord.Embed(title=
     "**Comandos**", description=
     "**Musica:**\n" + 
-    "\n**`!play:`**\n" + 
-    "\t!play <**`url`**>: Toca uma música a partir do **`url`** dado, se estiver alguma musica tocando, adiciona á fila.\n" + 
-    "\t!play playlist <**`nome da playlist`**>: Toca as músicas da playlist, se alguma estiver tocando, adiciona toda a playlist á fila.\n" + 
-    "\n**`!skip:`** Pula a música atual ou para de tocar se a fila estiver vazia.\n" + 
-    "**`!stop:`** Para a música atual e esvazia a fila.\n" + 
-    "**`!pause:`** Pausa a música atual.\n" + 
-    "**`!resume:`** Despausa a música pausada.\n" + 
-    "**`!tocando:`** Exibe a música atual.\n" + 
-    "**`!fila`** <**`pagina`**>: exibe a **`pagina`** da fila, se nenhuma pagina for especificada exibe a primeira\n" + 
-    "**`!playlists:`** Exibe as playlists diponíveis."))
+    f"\n**`{PREFIX}play:`**\n" + 
+    f"\t{PREFIX}play <**`url`**>: Toca uma música a partir do **`url`** dado, se estiver alguma musica tocando, adiciona á fila.\n" + 
+    f"\t{PREFIX}play playlist <**`nome da playlist`**>: Toca as músicas da playlist, se alguma estiver tocando, adiciona toda a playlist á fila.\n" + 
+    f"\n**`{PREFIX}skip:`** Pula a música atual ou para de tocar se a fila estiver vazia.\n" + 
+    f"**`{PREFIX}stop:`** Para a música atual e esvazia a fila.\n" + 
+    f"**`{PREFIX}pause:`** Pausa a música atual.\n" + 
+    f"**`{PREFIX}resume:`** Despausa a música pausada.\n" + 
+    f"**`{PREFIX}tocando:`** Exibe a música atual.\n" + 
+    f"**`{PREFIX}fila`** <**`pagina`**>: exibe a **`pagina`** da fila, se nenhuma pagina for especificada exibe a primeira\n" + 
+    f"**`{PREFIX}playlists:`** Exibe as playlists diponíveis."))
 
 
 def next_song(ctx):
