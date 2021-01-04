@@ -1,4 +1,6 @@
-import discord, os, youtube_dl, json, asyncio, random
+import os, json, asyncio, random
+import youtube_dl
+import discord
 from discord.ext import commands
 
 with open("config.json", 'r') as arq:
