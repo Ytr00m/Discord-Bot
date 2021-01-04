@@ -64,7 +64,7 @@ async def play(ctx, *args):
                         pass
                     info = ytdl.extract_info("https://www.youtube.com/watch?v=" + videos_playlist[i], download=False)
                     queue.append(info)
-            return
+                return
         try:
             info = ytdl.extract_info(args[0], download=False)
             tocando_agora.append(info)
