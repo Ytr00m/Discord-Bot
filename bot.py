@@ -10,7 +10,7 @@ INTENTS = discord.Intents.default()
 bot = commands.Bot(command_prefix=PREFIX, intents=INTENTS)
 
 ydl_opts = {
-    'format': 'bestaudio/best',
+    'format': 'bestaudio/best', 'quiet': True,
     'postprocessors': [{
         'key': 'FFmpegExtractAudio',
         'preferredcodec': 'mp3',
@@ -41,7 +41,7 @@ async def play(ctx, *args):
         pass
 
     if ctx.voice_client.channel != ctx.author.voice.channel:
-        await ctx.send(f"{ctx.author.mention} **não** está no canal de voz **{ctx.voice_client.channel}**!")
+        await ctx.send(f"{ctx.author.mention} **não** está no canal de voz **{ctx.voice_client.channel}**! Excutando mesmo assim.")
     if args[0] == "playlist":
         msg = await ctx.send(f":notes: *Processando playlist* **`{args[1]}`**.")
         await play_playlist(ctx, msg, args[1])
@@ -54,6 +54,17 @@ async def play(ctx, *args):
             return
         return
     if not ctx.voice_client.is_playing() and not ctx.voice_client.is_paused():
+        if type(args[0]) != dict:
+            if args[0].startswith('https://www.youtube.com/playlist'):
+                videos_playlist = extrai_playlist(args[0])
+                for i in range(len(videos_playlist)):
+                    if not ctx.voice_client.is_playing():
+                        info = ytdl.extract_info("https://www.youtube.com/watch?v=" + videos_playlist[i], download=False)
+                        await play(ctx, info)
+                        pass
+                    info = ytdl.extract_info("https://www.youtube.com/watch?v=" + videos_playlist[i], download=False)
+                    queue.append(info)
+            return
         try:
             info = ytdl.extract_info(args[0], download=False)
             tocando_agora.append(info)
@@ -159,11 +170,9 @@ async def fila(ctx, *args):
                 embed=discord.Embed(description=embeds[int(pagina) - 1] + f"Pagina {pagina}/{len(embeds)}"))
             await ctx.message.add_reaction(random.choice(await ctx.guild.fetch_emojis()))
         except IndexError:
-            msg = await ctx.send("Pagina não existente!")
+            msg = await ctx.send("Pagina inexistente!")
             await msg.add_reaction("❌")
             return
-        await asyncio.sleep(60)
-        await msg.delete()
 
 
 @bot.command()
@@ -176,19 +185,19 @@ async def playlists(ctx):
 
 @bot.command()
 async def ajuda(ctx):
-    await ctx.send(f"{ctx.author.mention}", 
+    await ctx.send(f"{ctx.author.mention}",
     embed=discord.Embed(title=
     "**Comandos**", description=
-    "**Musica:**\n" + 
-    f"\n**`{PREFIX}play:`**\n" + 
-    f"\t{PREFIX}play <**`url`**>: Toca uma música a partir do **`url`** dado, se estiver alguma musica tocando, adiciona á fila.\n" + 
-    f"\t{PREFIX}play playlist <**`nome da playlist`**>: Toca as músicas da playlist, se alguma estiver tocando, adiciona toda a playlist á fila.\n" + 
-    f"\n**`{PREFIX}skip:`** Pula a música atual ou para de tocar se a fila estiver vazia.\n" + 
-    f"**`{PREFIX}stop:`** Para a música atual e esvazia a fila.\n" + 
-    f"**`{PREFIX}pause:`** Pausa a música atual.\n" + 
-    f"**`{PREFIX}resume:`** Despausa a música pausada.\n" + 
-    f"**`{PREFIX}tocando:`** Exibe a música atual.\n" + 
-    f"**`{PREFIX}fila`** <**`pagina`**>: exibe a **`pagina`** da fila, se nenhuma pagina for especificada exibe a primeira\n" + 
+    "**Musica:**\n" +
+    f"\n**`{PREFIX}play:`**\n" +
+    f"\t{PREFIX}play <**`url`**>: Toca uma música a partir do **`url`** dado, se estiver alguma musica tocando, adiciona á fila. Se o link for uma **`playlist`** do youtube, extrai todos os videos dela e adiciona á fila.\n" +
+    f"\t{PREFIX}play playlist <**`nome da playlist`**>: Toca as músicas da playlist, se alguma estiver tocando, adiciona toda a playlist á fila.\n" +
+    f"\n**`{PREFIX}skip:`** Pula a música atual ou para de tocar se a fila estiver vazia.\n" +
+    f"**`{PREFIX}stop:`** Para a música atual e esvazia a fila.\n" +
+    f"**`{PREFIX}pause:`** Pausa a música atual.\n" +
+    f"**`{PREFIX}resume:`** Despausa a música pausada.\n" +
+    f"**`{PREFIX}tocando:`** Exibe a música atual.\n" +
+    f"**`{PREFIX}fila`** <**`pagina`**>: exibe a **`pagina`** da fila, se nenhuma pagina for especificada exibe a primeira\n" +
     f"**`{PREFIX}playlists:`** Exibe as playlists diponíveis."))
 
 
@@ -208,15 +217,27 @@ async def play_playlist(ctx, mensagem_do_bot, playlist_nome):
         await mensagem_do_bot.add_reaction("❌")
         await ctx.send(f"{ctx.author.mention}, *A playlist* **`{playlist_nome}`** *não existe!*")
         return
-
     for i in range(len(playlist)):
+        if playlist[i].startswith('https://www.youtube.com/playlist'):
+            videos_playlist = extrai_playlist(playlist[i])
+            for i in range(len(videos_playlist)):
+                if not ctx.voice_client.is_playing():
+                    info = ytdl.extract_info("https://www.youtube.com/watch?v=" + videos_playlist[i], download=False)
+                    videos_playlist.remove(videos_playlist[i])
+                    await play(ctx, info)
+                    pass
+                info = ytdl.extract_info("https://www.youtube.com/watch?v=" + videos_playlist[i], download=False)
+                queue.append(info)
+            pass
+
+
         choice = random.choice(playlist)
         info = ytdl.extract_info(choice, download=False)
         queue.append(info)
         playlist.remove(choice)
 
     await mensagem_do_bot.add_reaction("✅")
-        
+
 
 def duracao(duration):
     tempo = []
@@ -255,6 +276,16 @@ def cria_embeds(queue):
             songs = ""
 
     return embeds
+
+
+def extrai_playlist(playlist_url):
+    ytd = youtube_dl.YoutubeDL({'extract_flat': True, 'playlistrandom': True, 'quiet': True})
+    result = ytd.extract_info(playlist_url, download=False)
+    playlist = []
+    for i in range(len(result['entries'])-1):
+        playlist.append(result['entries'][i]['url'])
+
+    return playlist
 
 
 bot.run(TOKEN)
