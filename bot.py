@@ -10,13 +10,15 @@ INTENTS = discord.Intents.default()
 bot = commands.Bot(command_prefix=PREFIX, intents=INTENTS)
 
 ydl_opts = {
-    'format': 'bestaudio/best',
-    'postprocessors': [{
+        'format': 'bestaudio/best',
+        'postprocessors': [{
         'key': 'FFmpegExtractAudio',
+        'preferredcodec': 'mp3'
     }]}
 ytdl = youtube_dl.YoutubeDL(ydl_opts)
-
-
+ytdlFlat = youtube_dl.YoutubeDL({'extract_flat': True, 'quiet': True})
+linkPlaylist = "https://www.youtube.com/playlist"
+linkVideo = "https://www.youtube.com/watch?v="
 @bot.event
 async def on_ready():
     print(f'Logged in as: {bot.user.name}')
@@ -53,15 +55,13 @@ async def play(ctx, *args):
             return
         return
     if type(args[0]) != dict:
-        if args[0].startswith('https://www.youtube.com/playlist'):
+        if args[0].startswith(linkPlaylist):
             videos_playlist = extrai_playlist(args[0])
             for i in range(len(videos_playlist)-1):
                 if not ctx.voice_client.is_playing() and not ctx.voice_client.is_paused():
-                    info = ytdl.extract_info("https://www.youtube.com/watch?v=" + videos_playlist[i], download=False)
-                    await play(ctx, info)
+                    await play(ctx, linkVideo + videos_playlist[i]['url'])
                 else:
-                    info = ytdl.extract_info("https://www.youtube.com/watch?v=" + videos_playlist[i], download=False)
-                    queue.append(info)
+                    queue.append(videos_playlist[i])
             return
     if not ctx.voice_client.is_playing() and not ctx.voice_client.is_paused():
         try:
@@ -73,12 +73,13 @@ async def play(ctx, *args):
             ctx.voice_client.play(discord.FFmpegPCMAudio(info['url']), after=lambda e: next_song(ctx))
             return
         except TypeError:
+            info = ytdl.extract_info(linkVideo + args[0]['url'], download=False)
             tocando_agora.append(args[0])
             print(f"Tocando agora: {tocando_agora[0]['title']} [{':'.join(duracao(tocando_agora[0]['duration']))}].")
-            ctx.voice_client.play(discord.FFmpegPCMAudio(args[0]['url']), after=lambda e: next_song(ctx))
+            ctx.voice_client.play(discord.FFmpegPCMAudio(info['url']), after=lambda e: next_song(ctx))
             return
     else:
-        info = ytdl.extract_info(args[0], download=False)
+        info = ytdlFlat.extract_info(args[0], download=False)
         queue.append(info)
         await ctx.send(f"{ctx.author.mention} **{info['title']}** adicicionada a fila! :white_check_mark:")
         await ctx.message.add_reaction("✅")
@@ -93,6 +94,7 @@ async def skip(ctx):
             await stop(ctx)
             return
         await ctx.send(f":next_track: **{tocando_agora[0]['title']}** *pulada!*")
+        print(f"{tocando_agora[0]['title']} pulada.")
         ctx.voice_client.stop()
         await ctx.message.add_reaction(random.choice(await ctx.guild.fetch_emojis()))
         return
@@ -107,6 +109,7 @@ async def stop(ctx):
         ctx.voice_client.stop()
         await ctx.message.add_reaction(random.choice(await ctx.guild.fetch_emojis()))
         await ctx.send(":stop_button: *O player foi parado e a fila esvaziada!*")
+        print("Player parado e fila esvaziada.")
         return
 
     await ctx.send("*Não tem nenhuma musica tocando!*:x:")
@@ -118,6 +121,7 @@ async def pause(ctx):
         ctx.voice_client.pause()
         await ctx.message.add_reaction(random.choice(await ctx.guild.fetch_emojis()))
         await ctx.send(f":play_pause: **{tocando_agora[0]['title']}** *pausada!*")
+        print("Player pausado.")
         return
 
     await ctx.send("*Não tem nenhuma musica tocando!*:x:")
@@ -129,6 +133,7 @@ async def resume(ctx):
         ctx.voice_client.resume()
         await ctx.message.add_reaction(random.choice(await ctx.guild.fetch_emojis()))
         await ctx.send(f":play_pause: **{tocando_agora[0]['title']}** tocando novamente!")
+        print("Player despausado")
         return
 
     await ctx.send("*Não tem nenhuma musica pausada!*:x:")
@@ -217,16 +222,13 @@ async def play_playlist(ctx, mensagem_do_bot, playlist_nome):
         await ctx.send(f"{ctx.author.mention}, *A playlist* **`{playlist_nome}`** *não existe!*")
         return
     for i in range(len(playlist)):
-        if playlist[i].startswith('https://www.youtube.com/playlist'):
+        if playlist[i].startswith(linkPlaylist):
             videos_playlist = extrai_playlist(playlist[i])
             for i in range(len(videos_playlist)):
                 if not ctx.voice_client.is_playing():
-                    info = ytdl.extract_info("https://www.youtube.com/watch?v=" + videos_playlist[i], download=False)
-                    videos_playlist.remove(videos_playlist[i])
-                    await play(ctx, info)
+                    await play(ctx, videos_playlist[i]['url'])
                 else:
-                    info = ytdl.extract_info("https://www.youtube.com/watch?v=" + videos_playlist[i], download=False)
-                    queue.append(info)
+                    queue.append(videos_playlist[i])
             pass
 
 
@@ -248,14 +250,14 @@ def duracao(duration):
     segundos_rest = segundos_rest % 60
     if dias > 0:
         if dias < 10:
-            dias = f"0{str(dias)}"
+            dias = f"0{str(int(dias))}"
         tempo.append(dias)
     if horas > 0:
         if horas < 10:
-            horas = f"0{str(horas)}"
-        tempo.append(str(horas))
-    tempo.append(f"0{str(minutos)}" if minutos < 10 else str(minutos))
-    tempo.append(f"0{str(segundos_rest)}" if segundos_rest < 10 else str(segundos_rest))
+            horas = f"0{int(str(horas))}"
+        tempo.append(str(int(horas)))
+    tempo.append(f"0{str(int(minutos))}" if minutos < 10 else str(int(minutos)))
+    tempo.append(f"0{str(int(segundos_rest))}" if segundos_rest < 10 else str(int(segundos_rest)))
     return tempo
 
 
@@ -268,7 +270,7 @@ def cria_embeds(queue):
     for i in queue:
         tempo = duracao(queue[count - 1]['duration'])
         duration_song = ':'.join(tempo)
-        songs += f"`{count}.` [**`{queue[count - 1]['title']}`**]({queue[count - 1]['webpage_url']})  `[{duration_song}]`\n"
+        songs += f"`{count}.` [**`{queue[count - 1]['title']}`**]({linkVideo + queue[count - 1]['url']})  `[{duration_song}]`\n"
         count += 1
         if count % tamanho_max == 1 or count == len(queue) + 1:
             embeds.append(songs)
@@ -282,7 +284,7 @@ def extrai_playlist(playlist_url):
     result = ytd.extract_info(playlist_url, download=False)
     playlist = []
     for i in range(len(result['entries'])-1):
-        playlist.append(result['entries'][i]['url'])
+        playlist.append(result['entries'][i])
 
     return playlist
 
