@@ -16,7 +16,8 @@ Um simples bot de discord escrito em python
 ```json
 {
   "TOKEN" : "Token do seu bot",
-  "PREFIX" : "Prefixo que quiser para o bot"
+  "PREFIX" : "Prefixo que quiser para o bot",
+  "COGS_FILEPATH" : "Lib/Cogs"
 }
 
 ```
