@@ -10,10 +10,9 @@ INTENTS = discord.Intents.default()
 bot = commands.Bot(command_prefix=PREFIX, intents=INTENTS)
 
 ydl_opts = {
-    'format': 'bestaudio/best', 'quiet': True,
+    'format': 'bestaudio/best',
     'postprocessors': [{
         'key': 'FFmpegExtractAudio',
-        'preferredcodec': 'mp3',
     }]}
 ytdl = youtube_dl.YoutubeDL(ydl_opts)
 
@@ -53,18 +52,18 @@ async def play(ctx, *args):
                 pass
             return
         return
-    if not ctx.voice_client.is_playing() and not ctx.voice_client.is_paused():
-        if type(args[0]) != dict:
-            if args[0].startswith('https://www.youtube.com/playlist'):
-                videos_playlist = extrai_playlist(args[0])
-                for i in range(len(videos_playlist)):
-                    if not ctx.voice_client.is_playing():
-                        info = ytdl.extract_info("https://www.youtube.com/watch?v=" + videos_playlist[i], download=False)
-                        await play(ctx, info)
-                        pass
+    if type(args[0]) != dict:
+        if args[0].startswith('https://www.youtube.com/playlist'):
+            videos_playlist = extrai_playlist(args[0])
+            for i in range(len(videos_playlist)-1):
+                if not ctx.voice_client.is_playing() and not ctx.voice_client.is_paused():
+                    info = ytdl.extract_info("https://www.youtube.com/watch?v=" + videos_playlist[i], download=False)
+                    await play(ctx, info)
+                else:
                     info = ytdl.extract_info("https://www.youtube.com/watch?v=" + videos_playlist[i], download=False)
                     queue.append(info)
-                return
+            return
+    if not ctx.voice_client.is_playing() and not ctx.voice_client.is_paused():
         try:
             info = ytdl.extract_info(args[0], download=False)
             tocando_agora.append(info)
@@ -93,9 +92,9 @@ async def skip(ctx):
         if len(queue) == 0:
             await stop(ctx)
             return
+        await ctx.send(f":next_track: **{tocando_agora[0]['title']}** *pulada!*")
         ctx.voice_client.stop()
         await ctx.message.add_reaction(random.choice(await ctx.guild.fetch_emojis()))
-        await ctx.send(f":next_track: **{tocando_agora[0]['title']}** *pulada!*")
         return
     await ctx.send("*Não tem nenhuma musica tocando!*:x:")
 
@@ -225,9 +224,9 @@ async def play_playlist(ctx, mensagem_do_bot, playlist_nome):
                     info = ytdl.extract_info("https://www.youtube.com/watch?v=" + videos_playlist[i], download=False)
                     videos_playlist.remove(videos_playlist[i])
                     await play(ctx, info)
-                    pass
-                info = ytdl.extract_info("https://www.youtube.com/watch?v=" + videos_playlist[i], download=False)
-                queue.append(info)
+                else:
+                    info = ytdl.extract_info("https://www.youtube.com/watch?v=" + videos_playlist[i], download=False)
+                    queue.append(info)
             pass
 
 
