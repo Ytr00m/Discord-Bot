@@ -10,8 +10,8 @@ INTENTS = discord.Intents.default()
 bot = commands.Bot(command_prefix=PREFIX, intents=INTENTS)
 
 ydl_opts = {
-        'format': 'bestaudio/best',
-        'postprocessors': [{
+    'format': 'bestaudio/best', 'quiet': True,
+    'postprocessors': [{
         'key': 'FFmpegExtractAudio',
         'preferredcodec': 'mp3'
     }]}
@@ -19,6 +19,8 @@ ytdl = youtube_dl.YoutubeDL(ydl_opts)
 ytdlFlat = youtube_dl.YoutubeDL({'extract_flat': True, 'quiet': True})
 linkPlaylist = "https://www.youtube.com/playlist"
 linkVideo = "https://www.youtube.com/watch?v="
+
+
 @bot.event
 async def on_ready():
     print(f'Logged in as: {bot.user.name}')
@@ -27,8 +29,6 @@ async def on_ready():
 
 queue = []
 tocando_agora = []
-
-
 
 
 @bot.command()
@@ -42,7 +42,8 @@ async def play(ctx, *args):
         pass
 
     if ctx.voice_client.channel != ctx.author.voice.channel:
-        await ctx.send(f"{ctx.author.mention} **não** está no canal de voz **{ctx.voice_client.channel}**! Excutando mesmo assim.")
+        await ctx.send(
+            f"{ctx.author.mention} **não** está no canal de voz **{ctx.voice_client.channel}**! Excutando mesmo assim.")
     if args[0] == "playlist":
         msg = await ctx.send(f":notes: *Processando playlist* **`{args[1]}`**.")
         await play_playlist(ctx, msg, args[1])
@@ -57,7 +58,7 @@ async def play(ctx, *args):
     if type(args[0]) != dict:
         if args[0].startswith(linkPlaylist):
             videos_playlist = extrai_playlist(args[0])
-            for i in range(len(videos_playlist)-1):
+            for i in range(len(videos_playlist)):
                 if not ctx.voice_client.is_playing() and not ctx.voice_client.is_paused():
                     await play(ctx, linkVideo + videos_playlist[i]['url'])
                 else:
@@ -84,7 +85,6 @@ async def play(ctx, *args):
         await ctx.send(f"{ctx.author.mention} **{info['title']}** adicicionada a fila! :white_check_mark:")
         await ctx.message.add_reaction("✅")
         return
-
 
 
 @bot.command()
@@ -190,19 +190,19 @@ async def playlists(ctx):
 @bot.command()
 async def ajuda(ctx):
     await ctx.send(f"{ctx.author.mention}",
-    embed=discord.Embed(title=
-    "**Comandos**", description=
-    "**Musica:**\n" +
-    f"\n**`{PREFIX}play:`**\n" +
-    f"\t{PREFIX}play <**`url`**>: Toca uma música a partir do **`url`** dado, se estiver alguma musica tocando, adiciona á fila. Se o link for uma **`playlist`** do youtube, extrai todos os videos dela e adiciona á fila.\n" +
-    f"\t{PREFIX}play playlist <**`nome da playlist`**>: Toca as músicas da playlist, se alguma estiver tocando, adiciona toda a playlist á fila.\n" +
-    f"\n**`{PREFIX}skip:`** Pula a música atual ou para de tocar se a fila estiver vazia.\n" +
-    f"**`{PREFIX}stop:`** Para a música atual e esvazia a fila.\n" +
-    f"**`{PREFIX}pause:`** Pausa a música atual.\n" +
-    f"**`{PREFIX}resume:`** Despausa a música pausada.\n" +
-    f"**`{PREFIX}tocando:`** Exibe a música atual.\n" +
-    f"**`{PREFIX}fila`** <**`pagina`**>: exibe a **`pagina`** da fila, se nenhuma pagina for especificada exibe a primeira\n" +
-    f"**`{PREFIX}playlists:`** Exibe as playlists diponíveis."))
+                   embed=discord.Embed(title=
+                                       "**Comandos**", description=
+                                       "**Musica:**\n" +
+                                       f"\n**`{PREFIX}play:`**\n" +
+                                       f"\t{PREFIX}play <**`url`**>: Toca uma música a partir do **`url`** dado, se estiver alguma musica tocando, adiciona á fila. Se o link for uma **`playlist`** do youtube, extrai todos os videos dela e adiciona á fila.\n" +
+                                       f"\t{PREFIX}play playlist <**`nome da playlist`**>: Toca as músicas da playlist, se alguma estiver tocando, adiciona toda a playlist á fila.\n" +
+                                       f"\n**`{PREFIX}skip:`** Pula a música atual ou para de tocar se a fila estiver vazia.\n" +
+                                       f"**`{PREFIX}stop:`** Para a música atual e esvazia a fila.\n" +
+                                       f"**`{PREFIX}pause:`** Pausa a música atual.\n" +
+                                       f"**`{PREFIX}resume:`** Despausa a música pausada.\n" +
+                                       f"**`{PREFIX}tocando:`** Exibe a música atual.\n" +
+                                       f"**`{PREFIX}fila`** <**`pagina`**>: exibe a **`pagina`** da fila, se nenhuma pagina for especificada exibe a primeira\n" +
+                                       f"**`{PREFIX}playlists:`** Exibe as playlists diponíveis."))
 
 
 def next_song(ctx):
@@ -229,13 +229,9 @@ async def play_playlist(ctx, mensagem_do_bot, playlist_nome):
                     await play(ctx, videos_playlist[i]['url'])
                 else:
                     queue.append(videos_playlist[i])
-            pass
-
-
-        choice = random.choice(playlist)
-        info = ytdl.extract_info(choice, download=False)
-        queue.append(info)
-        playlist.remove(choice)
+        else:
+            info = ytdlFlat.extract_info(videos_playlist[i], download=False)
+            queue.append(info)
 
     await mensagem_do_bot.add_reaction("✅")
 
@@ -283,7 +279,7 @@ def extrai_playlist(playlist_url):
     ytd = youtube_dl.YoutubeDL({'extract_flat': True, 'playlistrandom': True, 'quiet': True})
     result = ytd.extract_info(playlist_url, download=False)
     playlist = []
-    for i in range(len(result['entries'])-1):
+    for i in range(len(result['entries'])):
         playlist.append(result['entries'][i])
 
     return playlist
