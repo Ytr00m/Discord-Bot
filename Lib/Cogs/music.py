@@ -6,7 +6,6 @@ import os
 from discord.ext import commands
 
 
-
 def setup(bot):
     bot.add_cog(MusicCog(bot))
 
@@ -29,17 +28,19 @@ class MusicCog(commands.Cog, name='Musica'):
 
     @commands.command()
     async def play(self, ctx, *args):
-        if ctx.author.voice is None:
-            await ctx.send(f"***{ctx.author.mention}*** não está em nenhum canal de voz!:mute:")
-            return
-        try:
-            await ctx.author.voice.channel.connect()
-        except discord.errors.ClientException or discord.ext.commands.errors.CommandInvokeError:
-            pass
+        if args[0] == 0:
+            for i in self.bot.guilds:
+                if i == ctx.guild:
+                    await asyncio.sleep(5)
+                    await i.change_voice_state(channel=None)
+                    return
+        if ctx.voice_client is None:
+            try:
+                await ctx.author.voice.channel.connect()
+            except AttributeError:
+                await ctx.send(f"***{ctx.author.mention}*** não está em nenhum canal de voz!:mute:")
+                return
 
-        if ctx.voice_client.channel != ctx.author.voice.channel:
-            await ctx.send(
-                f"{ctx.author.mention} **não** está no canal de voz **{ctx.voice_client.channel}**! Excutando mesmo assim.")
         if args[0] == "playlist":
             msg = await ctx.send(f":notes: *Processando playlist* **`{args[1]}`**.")
             await self.play_playlist(ctx, msg, args[1])
@@ -68,14 +69,14 @@ class MusicCog(commands.Cog, name='Musica'):
                 print(
                     f"Tocando agora: {self.tocando_agora[0]['title']} [{':'.join(self.duracao(self.tocando_agora[0]['duration']))}].")
 
-                ctx.voice_client.play(discord.FFmpegPCMAudio(info['url']), after=lambda e: self.next_song(ctx))
+                ctx.voice_client.play(discord.FFmpegPCMAudio(info['url'], before_options='-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 10'),  after=lambda e: self.next_song(ctx))
                 return
             except TypeError:
                 info = self.ytdl.extract_info(self.linkVideo + args[0]['url'], download=False)
                 self.tocando_agora.append(args[0])
                 print(
                     f"Tocando agora: {self.tocando_agora[0]['title']} [{':'.join(self.duracao(self.tocando_agora[0]['duration']))}].")
-                ctx.voice_client.play(discord.FFmpegPCMAudio(info['url']), after=lambda e: self.next_song(ctx))
+                ctx.voice_client.play(discord.FFmpegPCMAudio(info['url'], before_options='-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 10'), after=lambda e: self.next_song(ctx))
                 return
         else:
             info = self.ytdlFlat.extract_info(args[0], download=False)
@@ -196,8 +197,7 @@ class MusicCog(commands.Cog, name='Musica'):
 
     def next_song(self, ctx):
         self.tocando_agora.clear()
-        if len(self.queue) > 0:
-            asyncio.run(self.play(ctx, self.queue.pop(0)))
+        asyncio.run(self.play(ctx, self.queue.pop(0) if len(self.queue) > 0 else 0))
 
     async def play_playlist(self, ctx, mensagem_do_bot, playlist_nome):
         try:
