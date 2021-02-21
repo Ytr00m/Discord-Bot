@@ -25,6 +25,7 @@ class MusicCog(commands.Cog, name='Musica'):
         self.linkVideo = "https://www.youtube.com/watch?v="
         self.queue = {}
         self.tocando_agora = {}
+        self.looop = False
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member: discord.Member, before: discord.VoiceState, after: discord.VoiceState):
@@ -36,7 +37,7 @@ class MusicCog(commands.Cog, name='Musica'):
 
             print(f"Connectado ao canal {after.channel}")
 
-    @commands.command()
+    @commands.command(help="Toca uma música, playlist do youtube ou uma playlist salva.")
     async def play(self, ctx: commands.Context, *args):
 
         if not ctx.guild.id in self.tocando_agora:
@@ -98,10 +99,14 @@ class MusicCog(commands.Cog, name='Musica'):
 
             try:
                 info = self.ytdl.extract_info(args[0], download=False)
-                self.tocando_agora[ctx.guild.id].append(info)
+
+                if not self.looop:
+                    self.tocando_agora[ctx.guild.id].append(info)
+                    
                 await ctx.message.add_reaction("✅")
-                print(
-                    f"Tocando agora: {self.tocando_agora[ctx.guild.id][0]['title']} [{':'.join(self.duracao(self.tocando_agora[ctx.guild.id][0]['duration']))}].")
+                if not self.looop:
+                    print(
+                        f"Tocando agora: {self.tocando_agora[ctx.guild.id][0]['title']} [{':'.join(self.duracao(self.tocando_agora[ctx.guild.id][0]['duration']))}].")
 
                 ctx.voice_client.play(discord.FFmpegPCMAudio(info['url'], before_options='-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 10'),  after=lambda e: self.next_song(ctx))
                 
@@ -109,22 +114,32 @@ class MusicCog(commands.Cog, name='Musica'):
 
             except TypeError:
                 info = self.ytdl.extract_info(self.linkVideo + args[0]['url'], download=False)
-                self.tocando_agora[ctx.guild.id].append(args[0])
-                print(
-                    f"Tocando agora: {self.tocando_agora[ctx.guild.id][0]['title']} [{':'.join(self.duracao(self.tocando_agora[ctx.guild.id][0]['duration']))}].")
+                
+                if not self.looop:
+                    self.tocando_agora[ctx.guild.id].append(args[0])
+                    print(
+                        f"Tocando agora: {self.tocando_agora[ctx.guild.id][0]['title']} [{':'.join(self.duracao(self.tocando_agora[ctx.guild.id][0]['duration']))}].")
+
                 ctx.voice_client.play(discord.FFmpegPCMAudio(info['url'], before_options='-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 10'), after=lambda e: self.next_song(ctx))
                 
                 return
         else:
             info = self.ytdlFlat.extract_info(args[0], download=False)
-            self.queue[ctx.guild.id].append(info)
+            info['url'] = info['webpage_url'].replace(self.linkVideo, "")
+            if not self.looop:
+                self.queue[ctx.guild.id].append(info)
+
             await ctx.send(f"{ctx.author.mention} **{info['title']}** adicicionada a fila! :white_check_mark:")
             await ctx.message.add_reaction("✅")
 
             return
 
-    @commands.command()
+    @commands.command(help="Pula a música atual.")
     async def skip(self, ctx: commands.Context):
+
+        if self.looop:
+            await ctx.send("Comando não disponivel no modo loop.")
+
         if ctx.voice_client.is_playing() or ctx.voice_client.is_paused():
             if len(self.queue[ctx.guild.id]) == 0:
                 await self.stop(ctx)
@@ -140,8 +155,11 @@ class MusicCog(commands.Cog, name='Musica'):
 
         await ctx.send("*Não tem nenhuma musica tocando!*:x:")
 
-    @commands.command()
+    @commands.command(help="Para a música atual e esvazia a fila.")
     async def stop(self, ctx: commands.Context):
+
+        if self.looop:
+            self.looop = False
 
         if ctx.voice_client.is_playing() or ctx.voice_client.is_paused():
             self.queue[ctx.guild.id].clear()
@@ -155,7 +173,7 @@ class MusicCog(commands.Cog, name='Musica'):
 
         await ctx.send("*Não tem nenhuma musica tocando!*:x:")
 
-    @commands.command()
+    @commands.command(help="Pausa a música atual.")
     async def pause(self, ctx: commands.Context):
 
         if ctx.voice_client.is_playing():
@@ -168,20 +186,24 @@ class MusicCog(commands.Cog, name='Musica'):
 
         await ctx.send("*Não tem nenhuma musica tocando!*:x:")
 
-    @commands.command()
+    @commands.command(help="Despausa a música pausada.")
     async def resume(self, ctx: commands.Context):
 
         if ctx.voice_client.is_paused():
             ctx.voice_client.resume()
             await ctx.message.add_reaction(random.choice(await ctx.guild.fetch_emojis()))
             await ctx.send(f":play_pause: **{self.tocando_agora[ctx.guild.id][0]['title']}** tocando novamente!")
+
+            if self.looop:
+                await ctx.send(f"**Aviso! Modo loop ativado.**\n**Use** **´{self.bot.command_prefix}stop´** **para parar o loop.**")
+
             print("Player despausado")
 
             return
 
         await ctx.send("*Não tem nenhuma musica pausada!*:x:")
 
-    @commands.command()
+    @commands.command(help="Exibe a música atual.")
     async def tocando(self, ctx: commands.Context):
         try:
 
@@ -191,17 +213,30 @@ class MusicCog(commands.Cog, name='Musica'):
                 await ctx.message.add_reaction(random.choice(await ctx.guild.fetch_emojis()))
                 await ctx.send(
                     f":musical_note: **{self.tocando_agora[ctx.guild.id][0]['title']}** **`[{duration_song}]`**")
+
+                if self.looop:
+                    await ctx.send(f"**Aviso! Modo loop ativado.**\n**Use** **`{self.bot.command_prefix}stop`** **para parar o loop.**")
+
                 return
+
             await ctx.send("*Não tem nenhuma musica tocando!*")
 
         except AttributeError:
             await ctx.send("*Não tem nenhuma musica tocando!*")
 
-    @commands.command()
+    @commands.command(help="Exibe a fila.")
     async def fila(self, ctx: commands.Context, *args):
+
+        if self.looop:
+            await self.tocando(ctx)
+            
+            return
+
         if not ctx.guild.id in self.queue:
             await self.tocando(ctx)
+
         else:
+
             if len(self.queue[ctx.guild.id]) == 0:
                 await self.tocando(ctx)
                 return
@@ -229,33 +264,50 @@ class MusicCog(commands.Cog, name='Musica'):
 
                 return
 
-    @commands.command()
+    @commands.command(help="Exibe as playlists salvas.")
     async def playlists(self, ctx: commands.Context):
         playlists = os.listdir("Musica/Playlists")
         text = "`" + '` `'.join(playlists).replace(".txt", "") + "`"
         msg = await ctx.send(f"*Playlists:* **{text}**")
         await msg.add_reaction(random.choice(await ctx.guild.fetch_emojis()))
+    
+    @commands.command(help="Toca uma música em loop.")
+    async def loop(self, ctx: commands.Context, url: str):
 
-    @commands.command()
-    async def ajuda(self, ctx: commands.Context):
-        await ctx.send(f"{ctx.author.mention}",
-                       embed=discord.Embed(title=
-                                           "**Comandos**", description=
-                                           "**Musica:**\n" +
-                                           f"\n**`{self.bot.command_prefix}play:`**\n" +
-                                           f"\t{self.bot.command_prefix}play <**`url`**>: Toca uma música a partir do **`url`** dado, se estiver alguma musica tocando, adiciona á fila. Se o link for uma **`playlist`** do youtube, extrai todos os videos dela e adiciona á fila.\n" +
-                                           f"\t{self.bot.command_prefix}play playlist <**`nome da playlist`**>: Toca as músicas da playlist, se alguma estiver tocando, adiciona toda a playlist á fila.\n" +
-                                           f"\n**`{self.bot.command_prefix}skip:`** Pula a música atual ou para de tocar se a fila estiver vazia.\n" +
-                                           f"**`{self.bot.command_prefix}stop:`** Para a música atual e esvazia a fila.\n" +
-                                           f"**`{self.bot.command_prefix}pause:`** Pausa a música atual.\n" +
-                                           f"**`{self.bot.command_prefix}resume:`** Despausa a música pausada.\n" +
-                                           f"**`{self.bot.command_prefix}tocando:`** Exibe a música atual.\n" +
-                                           f"**`{self.bot.command_prefix}fila`** <**`pagina`**>: exibe a **`pagina`** da fila, se nenhuma pagina for especificada exibe a primeira\n" +
-                                           f"**`{self.bot.command_prefix}playlists:`** Exibe as playlists diponíveis."))
+        if self.looop:
+            await ctx.send("Já há uma música em loop")
+
+        if ctx.voice_client is not None:
+            await ctx.send("Pare o player e esvazie a fila para usar esta função.")
+
+            return
+
+        self.looop = True
+        info = self.ytdlFlat.extract_info(url, download=False)
+        info['url'] = info['webpage_url'].replace(self.linkVideo, "")
+        self.queue[ctx.guild.id] = []
+        self.tocando_agora[ctx.guild.id] = []
+        self.queue[ctx.guild.id].append(info)
+        self.tocando_agora[ctx.guild.id].append(info)
+        print(f"Tocando agora: {self.tocando_agora[ctx.guild.id][0]['title']} [{':'.join(self.duracao(self.tocando_agora[ctx.guild.id][0]['duration']))}]. MODO LOOP ATIVADO!!")
+        await self.play(ctx, url)
+
+
+    @commands.command(help="Disponível em breve.")
+    async def add_playlist(self):
+        pass
 
     def next_song(self, ctx: commands.Context):
-        self.tocando_agora[ctx.guild.id].clear()
-        asyncio.run(self.play(ctx, self.queue[ctx.guild.id].pop(0) if len(self.queue[ctx.guild.id]) > 0 else 0))
+
+        if not self.looop:
+            self.tocando_agora[ctx.guild.id].clear()
+            self.tocando_agora.pop(ctx.guild.id)
+
+            if len(self.queue[ctx.guild.id]) == 0:
+                self.queue.pop(ctx.guild.id)
+            asyncio.run(self.play(ctx, self.queue[ctx.guild.id].pop(0) if ctx.guild.id in self.queue else 0))
+        else:
+            asyncio.run(self.play(ctx, self.queue[ctx.guild.id][0]))
 
     async def play_playlist(self, ctx: commands.Context, mensagem_do_bot: discord.Message, playlist_nome):
 

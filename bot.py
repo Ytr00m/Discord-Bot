@@ -24,7 +24,6 @@ def load_cogs():
             else:
                 print(f"Cog {path} was loaded!")
 
-
 @bot.event
 async def on_ready():
     print(f'Logged in as: {bot.user.name}')
@@ -33,4 +32,4 @@ async def on_ready():
     load_cogs()
     print("Bot ready ✅")
 
-bot.run(TOKEN)
+bot.run(TOKEN, reconnect=True)
