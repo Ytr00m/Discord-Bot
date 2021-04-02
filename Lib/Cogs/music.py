@@ -34,8 +34,9 @@ class MusicCog(commands.Cog, name='Musica'):
             
             if before.channel:
                 print(f"Desconnectado do canal {before.channel}")
-
-            print(f"Connectado ao canal {after.channel}")
+                member.guild.change_voice_state(channel=None)
+            if after.channel:
+                print(f"Connectado ao canal {after.channel} do(a) {member.guild}")
 
     @commands.command(help="Toca uma música, playlist do youtube ou uma playlist salva.")
     async def play(self, ctx: commands.Context, *args):
