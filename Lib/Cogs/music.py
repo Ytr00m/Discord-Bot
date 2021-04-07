@@ -150,7 +150,8 @@ class MusicCog(commands.Cog, name='Musica'):
             await ctx.send(f":next_track: **{self.tocando_agora[ctx.guild.id][0]['title']}** *pulada!*")
             print(f"{self.tocando_agora[ctx.guild.id][0]['title']} pulada.")
             ctx.voice_client.stop()
-            await ctx.message.add_reaction(random.choice(await ctx.guild.fetch_emojis()))
+            if await ctx.guild.fetch_emojis():
+            	await ctx.message.add_reaction(random.choice(await ctx.guild.fetch_emojis()))
 
             return
 
@@ -166,7 +167,8 @@ class MusicCog(commands.Cog, name='Musica'):
             self.queue[ctx.guild.id].clear()
             self.tocando_agora[ctx.guild.id].clear()
             ctx.voice_client.stop()
-            await ctx.message.add_reaction(random.choice(await ctx.guild.fetch_emojis()))
+            if await ctx.guild.fetch_emojis():
+            	await ctx.message.add_reaction(random.choice(await ctx.guild.fetch_emojis()))
             await ctx.send(":stop_button: *O player foi parado e a fila esvaziada!*")
             print("Player parado e fila esvaziada.")
 
@@ -179,7 +181,8 @@ class MusicCog(commands.Cog, name='Musica'):
 
         if ctx.voice_client.is_playing():
             ctx.voice_client.pause()
-            await ctx.message.add_reaction(random.choice(await ctx.guild.fetch_emojis()))
+            if await ctx.guild.fetch_emojis():
+            	await ctx.message.add_reaction(random.choice(await ctx.guild.fetch_emojis()))
             await ctx.send(f":play_pause: **{self.tocando_agora[ctx.guild.id][0]['title']}** *pausada!*")
             print("Player pausado.")
 
@@ -192,7 +195,8 @@ class MusicCog(commands.Cog, name='Musica'):
 
         if ctx.voice_client.is_paused():
             ctx.voice_client.resume()
-            await ctx.message.add_reaction(random.choice(await ctx.guild.fetch_emojis()))
+            if await ctx.guild.fetch_emojis():
+            	await ctx.message.add_reaction(random.choice(await ctx.guild.fetch_emojis()))
             await ctx.send(f":play_pause: **{self.tocando_agora[ctx.guild.id][0]['title']}** tocando novamente!")
 
             if self.looop:
@@ -270,7 +274,8 @@ class MusicCog(commands.Cog, name='Musica'):
         playlists = os.listdir("Musica/Playlists")
         text = "`" + '` `'.join(playlists).replace(".txt", "") + "`"
         msg = await ctx.send(f"*Playlists:* **{text}**")
-        await msg.add_reaction(random.choice(await ctx.guild.fetch_emojis()))
+        if await ctx.guild.fetch_emojis():
+        	await msg.add_reaction(random.choice(await ctx.guild.fetch_emojis()))
     
     @commands.command(help="Toca uma música em loop.")
     async def loop(self, ctx: commands.Context, url: str):
